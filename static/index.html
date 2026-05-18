@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kysy Jukasta</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f0e;
+    --surface: #151918;
+    --surface2: #1c211f;
+    --border: #2a332f;
+    --accent: #4efa8c;
+    --accent-dim: #2a6647;
+    --text: #e8ede9;
+    --text-muted: #7a8f82;
+    --text-faint: #3d4f45;
+    --user-bg: #1a2e22;
+    --bot-bg: #151918;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--text-faint) 1px, transparent 1px),
+      linear-gradient(90deg, var(--text-faint) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.08;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 760px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
+  }
+
+  header {
+    padding: 40px 24px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+  }
+
+  .header-text h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 38px;
+    line-height: 1;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+
+  .header-text h1 span { color: var(--accent); font-style: italic; }
+
+  .header-text p {
+    margin-top: 8px;
+    color: var(--text-muted);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 12px var(--accent); }
+    50% { opacity: 0.5; box-shadow: 0 0 4px var(--accent); }
+  }
+
+  .suggestions {
+    padding: 16px 24px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 6px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.03em;
+  }
+
+  .chip:hover { border-color: var(--accent-dim); color: var(--accent); background: #0f1f17; }
+
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    scroll-behavior: smooth;
+  }
+
+  .messages::-webkit-scrollbar { width: 4px; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .message {
+    display: flex;
+    gap: 14px;
+    animation: fadeUp 0.25s ease forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .message.user { flex-direction: row-reverse; }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .user .avatar { border-color: var(--accent-dim); color: var(--accent); }
+
+  .bubble {
+    max-width: 80%;
+    padding: 14px 18px;
+    border: 1px solid var(--border);
+    background: var(--bot-bg);
+    line-height: 1.7;
+    color: var(--text);
+    font-size: 13.5px;
+  }
+
+  .user .bubble { background: var(--user-bg); border-color: var(--accent-dim); }
+
+  .typing { display: flex; gap: 14px; align-items: flex-start; }
+
+  .typing-dots {
+    display: flex;
+    gap: 5px;
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    background: var(--bot-bg);
+  }
+
+  .typing-dots span {
+    width: 6px;
+    height: 6px;
+    background: var(--accent-dim);
+    border-radius: 50%;
+    animation: blink 1.2s ease-in-out infinite;
+  }
+
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes blink {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; background: var(--accent); }
+  }
+
+  .input-area {
+    padding: 20px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    background: var(--bg);
+  }
+
+  textarea {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 12px 16px;
+    resize: none;
+    outline: none;
+    line-height: 1.6;
+    transition: border-color 0.15s;
+    min-height: 48px;
+    max-height: 140px;
+  }
+
+  textarea:focus { border-color: var(--accent-dim); }
+  textarea::placeholder { color: var(--text-faint); }
+
+  button#sendBtn {
+    background: var(--accent);
+    border: none;
+    color: #0a1a10;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 0 20px;
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    transition: all 0.15s;
+    align-self: flex-end;
+    height: 48px;
+  }
+
+  button#sendBtn:hover { background: #6fffa0; }
+  button#sendBtn:disabled { background: var(--accent-dim); color: var(--text-faint); cursor: not-allowed; }
+
+  .welcome {
+    border: 1px solid var(--border);
+    padding: 20px;
+    background: var(--surface);
+    animation: fadeUp 0.4s ease forwards;
+  }
+
+  .welcome-label {
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    margin-bottom: 10px;
+  }
+
+  .welcome p { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="header-text">
+      <h1>Kysy <span>Jukasta</span></h1>
+      <p>AI-agentti · Jukka Heikkilä · IT & Data Science</p>
+    </div>
+    <div style="margin-left:auto; margin-bottom:6px">
+      <div class="status-dot"></div>
+    </div>
+  </header>
+
+  <div class="suggestions">
+    <button class="chip" onclick="sendChip(this)">Mitä Jukka osaa?</button>
+    <button class="chip" onclick="sendChip(this)">Kerro vedonlyöntiohjelmista</button>
+    <button class="chip" onclick="sendChip(this)">Mikä on Sea Watch?</button>
+    <button class="chip" onclick="sendChip(this)">Minkälainen tiimipelaaja Jukka on?</button>
+    <button class="chip" onclick="sendChip(this)">Miksi alan vaihto IT:hen?</button>
+    <button class="chip" onclick="sendChip(this)">Mitä Jukka hakee työltä?</button>
+  </div>
+
+  <div class="messages" id="messages">
+    <div class="welcome">
+      <div class="welcome-label">// TERVETULOA</div>
+      <p>Hei! Olen tekoälyagentti joka tuntee Jukan. Voit kysyä minulta mitä tahansa hänen osaamisestaan, projekteistaan tai taustastaan. Olen täällä auttamassa sinua tutustumaan Jukkaan paremmin.</p>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <textarea id="userInput" placeholder="Kysy jotain Jukasta..." rows="1"
+      onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button id="sendBtn" onclick="sendMessage()">Lähetä →</button>
+  </div>
+</div>
+
+<script>
+  let conversationHistory = [];
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+  }
+
+  function sendChip(btn) {
+    document.getElementById('userInput').value = btn.textContent;
+    sendMessage();
+  }
+
+  function appendMessage(role, text) {
+    const container = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = `message ${role}`;
+
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = role === 'user' ? 'SIN' : 'JH';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.innerHTML = text.replace(/\n/g, '<br>');
+
+    div.appendChild(avatar);
+    div.appendChild(bubble);
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function showTyping() {
+    const container = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'typing';
+    div.id = 'typingIndicator';
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = 'JH';
+    const dots = document.createElement('div');
+    dots.className = 'typing-dots';
+    dots.innerHTML = '<span></span><span></span><span></span>';
+    div.appendChild(avatar);
+    div.appendChild(dots);
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function removeTyping() {
+    const el = document.getElementById('typingIndicator');
+    if (el) el.remove();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('userInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+    document.getElementById('sendBtn').disabled = true;
+
+    appendMessage('user', text);
+    conversationHistory.push({ role: 'user', content: text });
+    showTyping();
+
+    try {
+      const response = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: conversationHistory })
+      });
+
+      const data = await response.json();
+      removeTyping();
+
+      if (data.error) {
+        appendMessage('assistant', '⚠️ Virhe: ' + data.error);
+      } else {
+        conversationHistory.push({ role: 'assistant', content: data.reply });
+        appendMessage('assistant', data.reply);
+      }
+    } catch (err) {
+      removeTyping();
+      appendMessage('assistant', '⚠️ Verkkovirhe. Yritä uudelleen.');
+    }
+
+    document.getElementById('sendBtn').disabled = false;
+    input.focus();
+  }
+</script>
+</body>
+</html>
